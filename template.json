@@ -5,6 +5,10 @@
         "DomainName": {
             "Type": "String",
             "Description": "The registered DNS domain name for this application, e.g. example.com"
+        },
+        "OriginAccessIdentity": {
+            "Type": "String",
+            "Description": "An origin access identity is a special CloudFront user that you can use to give CloudFront access to your Amazon S3 bucket."
         }
     },
     "Mappings": {
@@ -53,106 +57,186 @@
     },
     "Resources": {
         "BucketPolicy": {
-          "Type": "AWS::S3::BucketPolicy",
-          "Properties": {
-              "PolicyDocument": {
-                  "Id": "S3BucketPolicy",
-                  "Statement": [
-                      {
-                          "Sid": "ReadAccess",
-                          "Action": [
-                              "s3:GetObject"
-                          ],
-                          "Effect": "Allow",
-                          "Resource": {
-                              "Fn::Join": [
-                                  "",
-                                  [
-                                      "arn:aws:s3:::",
-                                      {
-                                          "Ref": "WWWBucket"
-                                      },
-                                      "/*"
-                                  ]
-                              ]
-                          },
-                          "Principal": {
-                              "AWS": "*"
-                          }
-                      }
-                  ]
-              },
-              "Bucket": {
-                  "Ref": "WWWBucket"
-              }
-          }
-      },
-        "WWWBucket": {
-            "Type": "AWS::S3::Bucket",
+            "Type": "AWS::S3::BucketPolicy",
             "Properties": {
-                "AccessControl": "PublicRead",
-                "BucketName": {
-                    "Fn::Join": [
-                        "",
-                        [
-                            "www.",
-                            {
-                                "Ref": "DomainName"
+                "PolicyDocument": {
+                    "Id": "S3BucketPolicy",
+                    "Statement": [
+                        {
+                            "Sid": "ReadAccess",
+                            "Action": [
+                                "s3:GetObject"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "WWWBucket"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            },
+                            "Principal": {
+                                "AWS": "*"
                             }
-                        ]
+                        }
                     ]
                 },
-                "VersioningConfiguration": {
-                    "Status": "Enabled"
-                },
-                "WebsiteConfiguration": {
-                    "IndexDocument": "index.html",
-                    "ErrorDocument":"404.html"
-                },
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": {
-                            "Fn::Join": [
-                                "",
-                                [
-                                    "www.",
-                                    {
-                                        "Ref": "DomainName"
-                                    }
-                                ]
-                            ]
-                        }
-                    }
-                ]
+                "Bucket": {
+                    "Ref": "WWWBucket"
+                }
             }
         },
-        "DNS": {
-            "Type": "AWS::Route53::RecordSetGroup",
+        "CloudFrontDistribution": {
+            "Type": "AWS::CloudFront::Distribution",
             "Properties": {
-                "HostedZoneName": {
-                    "Fn::Join": ["", [{"Ref": "DomainName"}, "."]]
-                },
-                "Comment": "Zone apex alias.",
-                "RecordSets": [
-                    {
-                      "Name": {
-                          "Fn::Join": ["", ["www.", {"Ref":"DomainName"}]]
-                      },
-                        "Type": "A",
-                        "AliasTarget": {
-                            "HostedZoneId": {"Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "ZoneId"]},
-                            "DNSName": {"Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "EndPoint"]}
+                "DistributionConfig": {
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "QueryString": "false",
+                            "Cookies": {
+                                "Forward": "none"
+                            }
+                        },
+                        "TargetOriginId": "S3Origin",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "WWWBucket",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "S3Origin",
+                            "OriginPath": "",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "origin-access-identity/cloudfront/",
+                                            {
+                                                "Ref": "OriginAccessIdentity"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
+            },
+            "WWWBucket": {
+                "Type": "AWS::S3::Bucket",
+                "Properties": {
+                    "AccessControl": "PublicRead",
+                    "BucketName": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "www.",
+                                {
+                                    "Ref": "DomainName"
+                                }
+                            ]
+                        ]
+                    },
+                    "VersioningConfiguration": {
+                        "Status": "Enabled"
+                    },
+                    "WebsiteConfiguration": {
+                        "IndexDocument": "index.html",
+                        "ErrorDocument": "404.html"
+                    },
+                    "Tags": [
+                        {
+                            "Key": "Name",
+                            "Value": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "www.",
+                                        {
+                                            "Ref": "DomainName"
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "DNS": {
+                "Type": "AWS::Route53::RecordSetGroup",
+                "Properties": {
+                    "HostedZoneName": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                {
+                                    "Ref": "DomainName"
+                                },
+                                "."
+                            ]
+                        ]
+                    },
+                    "Comment": "Zone apex alias.",
+                    "RecordSets": [
+                        {
+                            "Name": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "www.",
+                                        {
+                                            "Ref": "DomainName"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "Type": "A",
+                            "AliasTarget": {
+                                "HostedZoneId": {
+                                    "Fn::FindInMap": [
+                                        "RegionMap",
+                                        {
+                                            "Ref": "AWS::Region"
+                                        },
+                                        "ZoneId"
+                                    ]
+                                },
+                                "DNSName": {
+                                    "Fn::FindInMap": [
+                                        "RegionMap",
+                                        {
+                                            "Ref": "AWS::Region"
+                                        },
+                                        "EndPoint"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
             }
-        }
-    },
-    "Outputs": {
-        "WebsiteURL": {
-            "Value": {"Fn::GetAtt": ["WWWBucket", "WebsiteURL"]},
-            "Description": "URL for website hosted on S3"
+        },
+        "Outputs": {
+            "WebsiteURL": {
+                "Value": {
+                    "Fn::GetAtt": [
+                        "WWWBucket",
+                        "WebsiteURL"
+                    ]
+                },
+                "Description": "URL for website hosted on S3"
+            }
         }
     }
 }
