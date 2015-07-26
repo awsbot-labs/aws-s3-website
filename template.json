@@ -5,6 +5,10 @@
         "DomainName": {
             "Type": "String",
             "Description": "The registered DNS domain name for this application, e.g. example.com"
+        },
+        "RedirectName": {
+            "Type": "String",
+            "Description": "The registered DNS domain name to redirect to, e.g. redirect.com"
         }
     },
     "Mappings": {
@@ -52,45 +56,9 @@
         }
     },
     "Resources": {
-        "BucketPolicy": {
-          "Type": "AWS::S3::BucketPolicy",
-          "Properties": {
-              "PolicyDocument": {
-                  "Id": "S3BucketPolicy",
-                  "Statement": [
-                      {
-                          "Sid": "ReadAccess",
-                          "Action": [
-                              "s3:GetObject"
-                          ],
-                          "Effect": "Allow",
-                          "Resource": {
-                              "Fn::Join": [
-                                  "",
-                                  [
-                                      "arn:aws:s3:::",
-                                      {
-                                          "Ref": "WWWBucket"
-                                      },
-                                      "/*"
-                                  ]
-                              ]
-                          },
-                          "Principal": {
-                              "AWS": "*"
-                          }
-                      }
-                  ]
-              },
-              "Bucket": {
-                  "Ref": "WWWBucket"
-              }
-          }
-      },
         "WWWBucket": {
             "Type": "AWS::S3::Bucket",
             "Properties": {
-                "AccessControl": "PublicRead",
                 "BucketName": {
                     "Fn::Join": [
                         "",
@@ -102,17 +70,34 @@
                         ]
                     ]
                 },
-                "VersioningConfiguration": {
-                    "Status": "Enabled"
-                },
+                "AccessControl": "BucketOwnerFullControl",
                 "WebsiteConfiguration": {
-                    "IndexDocument": "index.html",
-                    "ErrorDocument":"404.html"
+                    "RedirectAllRequestsTo": {
+                        "HostName": {
+                            "Ref": "RedirectName"
+                        }
+                    }
+                }
+            }
+        },
+        "DNS": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DomainName"
+                            },
+                            "."
+                        ]
+                    ]
                 },
-                "Tags": [
+                "Comment": "Zone apex alias.",
+                "RecordSets": [
                     {
-                        "Key": "Name",
-                        "Value": {
+                        "Name": {
                             "Fn::Join": [
                                 "",
                                 [
@@ -122,27 +107,27 @@
                                     }
                                 ]
                             ]
-                        }
-                    }
-                ]
-            }
-        },
-        "DNS": {
-            "Type": "AWS::Route53::RecordSetGroup",
-            "Properties": {
-                "HostedZoneName": {
-                    "Fn::Join": ["", [{"Ref": "DomainName"}, "."]]
-                },
-                "Comment": "Zone apex alias.",
-                "RecordSets": [
-                    {
-                      "Name": {
-                          "Fn::Join": ["", ["www.", {"Ref":"DomainName"}]]
-                      },
+                        },
                         "Type": "A",
                         "AliasTarget": {
-                            "HostedZoneId": {"Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "ZoneId"]},
-                            "DNSName": {"Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "EndPoint"]}
+                            "HostedZoneId": {
+                                "Fn::FindInMap": [
+                                    "RegionMap",
+                                    {
+                                        "Ref": "AWS::Region"
+                                    },
+                                    "ZoneId"
+                                ]
+                            },
+                            "DNSName": {
+                                "Fn::FindInMap": [
+                                    "RegionMap",
+                                    {
+                                        "Ref": "AWS::Region"
+                                    },
+                                    "EndPoint"
+                                ]
+                            }
                         }
                     }
                 ]
@@ -151,7 +136,12 @@
     },
     "Outputs": {
         "WebsiteURL": {
-            "Value": {"Fn::GetAtt": ["WWWBucket", "WebsiteURL"]},
+            "Value": {
+                "Fn::GetAtt": [
+                    "WWWBucket",
+                    "WebsiteURL"
+                ]
+            },
             "Description": "URL for website hosted on S3"
         }
     }

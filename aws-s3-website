@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ $# -eq 0 ]; then
-  echo "Usage: $0 <DNSDOMAIN>"
-  echo "e.g. $0 example.com"
+  echo "Usage: $0 <DOMAIN_NAME> <REDIRECT_NAME>"
+  echo "e.g. $0 example.com redirect.com"
   exit 1
 else
   STACK_NAME=`echo $1 | sed -e 's/\./\-/g'`
@@ -12,5 +12,5 @@ else
     --stack-name www-$STACK_NAME \
     --template-body file://template.json \
     --capabilities CAPABILITY_IAM \
-    --parameters ParameterKey=DomainName,ParameterValue=$1
+    --parameters ParameterKey=DomainName,ParameterValue=$1 ParameterKey=RedirectName,ParameterValue=$2
 fi
