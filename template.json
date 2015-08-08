@@ -5,6 +5,11 @@
         "DomainName": {
             "Type": "String",
             "Description": "The registered DNS domain name for this application, e.g. example.com"
+        },
+        "OriginAccessIdentity": {
+            "Type": "String",
+            "NoEcho": "true",
+            "Description": "An origin access identity is a special CloudFront user that you can use to give CloudFront access to your Amazon S3 bucket."
         }
     },
     "Mappings": {
@@ -84,6 +89,61 @@
                 },
                 "Bucket": {
                     "Ref": "WWWBucket"
+                }
+            }
+        },
+        "CloudFrontDistribution": {
+            "Type": "AWS::CloudFront::Distribution",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": [
+                        {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "www.",
+                                    {
+                                        "Ref": "DomainName"
+                                    }
+                                ]
+                            ]
+                        }
+                    ],
+                    "DefaultCacheBehavior": {
+                        "ForwardedValues": {
+                            "QueryString": "false",
+                            "Cookies": {
+                                "Forward": "none"
+                            }
+                        },
+                        "TargetOriginId": "S3Origin",
+                        "ViewerProtocolPolicy": "allow-all"
+                    },
+                    "Enabled": "true",
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "WWWBucket",
+                                    "DomainName"
+                                ]
+                            },
+                            "Id": "S3Origin",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "origin-access-identity/cloudfront/",
+                                            {
+                                                "Ref": "OriginAccessIdentity"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            }
+                        }
+                    ]
                 }
             }
         },
@@ -167,12 +227,9 @@
                                 ]
                             },
                             "DNSName": {
-                                "Fn::FindInMap": [
-                                    "RegionMap",
-                                    {
-                                        "Ref": "AWS::Region"
-                                    },
-                                    "EndPoint"
+                                "Fn::GetAtt" : [ 
+                                  "CloudFrontDistribution",
+                                  "DomainName"
                                 ]
                             }
                         }
@@ -182,7 +239,7 @@
         }
     },
     "Outputs": {
-        "WebsiteURL": {
+        "S3WebsiteURL": {
             "Value": {
                 "Fn::GetAtt": [
                     "WWWBucket",
