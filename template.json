@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Creates an s3 bucket website.",
+    "Description": "Creates an s3 bucket website with CloudFront distribution and a route53 DNS alias record.",
     "Parameters": {
         "DomainName": {
             "Type": "String",
