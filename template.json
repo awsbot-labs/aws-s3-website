@@ -119,10 +119,7 @@
                         "TargetOriginId": "S3Origin",
                         "ViewerProtocolPolicy": "allow-all"
                     },
-<<<<<<< HEAD
                     "DefaultRootObject": "index.html",
-=======
->>>>>>> ac2c9690e7a6b98e92bd6ed279b0a5cf3ba436bb
                     "Enabled": "true",
                     "Origins": [
                         {
