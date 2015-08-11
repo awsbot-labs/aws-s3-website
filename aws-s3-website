@@ -4,9 +4,10 @@ if [ $# -eq 0 ]; then
   echo "e.g. $0 example.com E115G30W0SLMRZ"
   exit 1
 else
+  export AWS_DEFAULT_PROFILE=aws-s3-website
   STACK_NAME=`echo $1 | sed -e 's/\./\-/g'`
   # Configures the aws-cli, requires an access key id and secret
-  aws configure --profile default
+  aws configure --profile $AWS_DEFAULT_PROFILE
   # Creates a CloudFormation stack for the s3 bucket website
   #aws cloudformation update-stack \
   aws cloudformation create-stack \

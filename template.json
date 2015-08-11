@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Creates an s3 bucket website.",
+    "Description": "Creates an s3 bucket website with a CloudFront distribution and Route53 alias record.",
     "Parameters": {
         "DomainName": {
             "Type": "String",
@@ -119,6 +119,7 @@
                         "TargetOriginId": "S3Origin",
                         "ViewerProtocolPolicy": "allow-all"
                     },
+                    "DefaultRootObject": "index.html",
                     "Enabled": "true",
                     "Origins": [
                         {
@@ -129,7 +130,6 @@
                                 ]
                             },
                             "Id": "S3Origin",
-                            "OriginPath": "",
                             "S3OriginConfig": {
                                 "OriginAccessIdentity": {
                                     "Fn::Join": [
@@ -218,22 +218,11 @@
                         },
                         "Type": "A",
                         "AliasTarget": {
-                            "HostedZoneId": {
-                                "Fn::FindInMap": [
-                                    "RegionMap",
-                                    {
-                                        "Ref": "AWS::Region"
-                                    },
-                                    "ZoneId"
-                                ]
-                            },
+                            "HostedZoneId": "Z2FDTNDATAQYW2",
                             "DNSName": {
-                                "Fn::FindInMap": [
-                                    "RegionMap",
-                                    {
-                                        "Ref": "AWS::Region"
-                                    },
-                                    "EndPoint"
+                                "Fn::GetAtt": [
+                                    "CloudFrontDistribution",
+                                    "DomainName"
                                 ]
                             }
                         }
